@@ -47,7 +47,7 @@ async def update_whitelist_on_panel(instance, whitelist_json):
                 print(f"Whitelist updated on {instance['name']}")
 
 async def update_ops_on_panel(instance, ops_json):
-    url = f"{instance['api_url']}/files/write?file={quote('/home/container/ops.json')}"
+    url = f"{instance['api_url']}/files/write?file={quote('ops.json')}"
     api_key = instance["api_key"]
     headers = {
         "Authorization": f"Bearer {api_key}",

@@ -120,7 +120,9 @@ async def block(ctx, discord_username=None, mc_username=None):
 @bot.slash_command()
 @is_whitelist_admin()
 async def sync_whitelist(ctx):
+    await ctx.defer(ephemeral=True)
     await update_all_whitelists()
+    await update_all_ops()
     await ctx.respond("Whitelist sync triggered.", ephemeral=True)
 
 @bot.slash_command()
