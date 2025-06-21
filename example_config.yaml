@@ -1,7 +1,7 @@
 # Example config for Pterodactyl panel instances
 # Use environment variables for API keys
 admin:
-  allowed_role_name: WhitelistAdmin
+  allowed_role_id: 123123123123
   allowed_user_ids: []
 servers:
   - name: Server1
