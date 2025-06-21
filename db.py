@@ -83,3 +83,16 @@ def remove_player_by_discord(discord_username):
     c.execute('DELETE FROM players WHERE discord_username = ?', (discord_username,))
     conn.commit()
     conn.close()
+
+def unblock_user(discord_username=None, mc_username=None):
+    import sqlite3
+    conn = sqlite3.connect("whitelist.db")
+    c = conn.cursor()
+    if discord_username and mc_username:
+        c.execute('DELETE FROM blocked_users WHERE discord_username = ? OR mc_username = ?', (discord_username, mc_username))
+    elif discord_username:
+        c.execute('DELETE FROM blocked_users WHERE discord_username = ?', (discord_username,))
+    elif mc_username:
+        c.execute('DELETE FROM blocked_users WHERE mc_username = ?', (mc_username,))
+    conn.commit()
+    conn.close()

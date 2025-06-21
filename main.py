@@ -10,7 +10,7 @@ import aiohttp
 from pterodactyl_api import update_all_whitelists, update_all_ops
 from mojang_api import get_mojang_profile
 
-from db import init_db, add_player, get_player_by_discord, list_players, is_blocked, block_user, remove_player_by_discord
+from db import init_db, add_player, get_player_by_discord, list_players, is_blocked, block_user, remove_player_by_discord, unblock_user
 from config import load_pterodactyl_instances, load_admin_config
 import json
 
@@ -67,7 +67,7 @@ async def register(ctx, mc_username):
     if is_admin:
         await update_all_ops()
     op_msg = "\nYou will need to restart the server to apply your operator permissions."
-    await ctx.respond(f"You have been registered as: {mc_username}. {op_msg if is_admin else ""}", ephemeral=True)
+    await ctx.respond(f"You have been registered as: {mc_username}. {op_msg if is_admin else ''}", ephemeral=True)
 
 # Admin command to list all users
 @bot.slash_command()
@@ -114,7 +114,23 @@ async def block(ctx, discord_username=None, mc_username=None):
         await ctx.respond("Provide at least a Discord username or MC username to block.", ephemeral=True)
         return
     block_user(discord_username, mc_username)
+    await update_all_whitelists()
+    await update_all_ops()
     await ctx.respond(f"Blocked user: Discord={discord_username}, MC={mc_username}", ephemeral=True)
+
+# Admin command to unblock users
+@bot.slash_command()
+@is_whitelist_admin()
+@option("discord_username", discord.SlashCommandOptionType.user, required=False)
+@option("mc_username", discord.SlashCommandOptionType.string, required=False)
+async def unblock(ctx, discord_username=None, mc_username=None):
+    if not discord_username and not mc_username:
+        await ctx.respond("Provide at least a Discord username or MC username to unblock.", ephemeral=True)
+        return
+    unblock_user(discord_username, mc_username)
+    await update_all_whitelists()
+    await update_all_ops()
+    await ctx.respond(f"Unblocked user: Discord={discord_username}, MC={mc_username}", ephemeral=True)
 
 # Admin command to sync whitelist
 @bot.slash_command()
@@ -133,6 +149,7 @@ async def deregister(ctx):
         return
     remove_player_by_discord(discord_username)
     await update_all_whitelists()
+    await update_all_ops()
     await ctx.respond("You have been deregistered and removed from the whitelist.", ephemeral=True)
 
     
