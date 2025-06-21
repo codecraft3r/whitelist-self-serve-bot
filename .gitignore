@@ -1,4 +1,5 @@
 *.env
 *.db
+config.yaml
 .venv/*
 __pycache__/*

@@ -1,0 +1,16 @@
+# Example config for Pterodactyl panel instances
+# Use environment variables for API keys
+admin:
+  allowed_role_name: WhitelistAdmin
+  allowed_user_ids: []
+servers:
+  - name: Server1
+    api_url: https://panel.example.com/api/client/servers/<SERVER_ID> # make sure there's no slash here or you *will* have problems.
+    api_key_env: PTERO_KEY_SERVER1
+    # or
+    api_key: api_key_here
+    whitelist_path: /home/whitelist.json
+  # - name: Server2
+  #   api_url: https://panel2.example.com/api/client/servers/<SERVER_ID>
+  #   api_key_env: PTERO_API_KEY_SERVER2
+  #   whitelist_path: /home/container/whitelist.json

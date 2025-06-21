@@ -10,7 +10,8 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             mc_username TEXT NOT NULL,
             discord_username TEXT NOT NULL,
-            uuid TEXT NOT NULL
+            uuid TEXT NOT NULL,
+            op INTEGER DEFAULT 0
         )
     ''')
     c.execute('''
@@ -23,13 +24,13 @@ def init_db():
     conn.commit()
     conn.close()
 
-def add_player(mc_username, discord_username, uuid):
+def add_player(mc_username, discord_username, uuid, op=0):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        INSERT INTO players (mc_username, discord_username, uuid)
-        VALUES (?, ?, ?)
-    ''', (mc_username, discord_username, uuid))
+        INSERT INTO players (mc_username, discord_username, uuid, op)
+        VALUES (?, ?, ?, ?)
+    ''', (mc_username, discord_username, uuid, op))
     conn.commit()
     conn.close()
 
@@ -44,7 +45,7 @@ def get_player_by_discord(discord_username):
 def list_players():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('SELECT mc_username, discord_username, uuid FROM players')
+    c.execute('SELECT mc_username, discord_username, uuid, op FROM players')
     results = c.fetchall()
     conn.close()
     return results
@@ -74,3 +75,11 @@ def is_blocked(discord_username=None, mc_username=None):
     result = c.fetchone()
     conn.close()
     return bool(result)
+
+def remove_player_by_discord(discord_username):
+    import sqlite3
+    conn = sqlite3.connect("whitelist.db")
+    c = conn.cursor()
+    c.execute('DELETE FROM players WHERE discord_username = ?', (discord_username,))
+    conn.commit()
+    conn.close()

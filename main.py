@@ -7,26 +7,27 @@ from discord.ext import commands
 from dotenv import load_dotenv
 import asyncio
 import aiohttp
-from pterodactyl_api import update_all_whitelists
+from pterodactyl_api import update_all_whitelists, update_all_ops
 from mojang_api import get_mojang_profile
 
-from db import init_db, add_player, get_player_by_discord, list_players, is_blocked, block_user
+from db import init_db, add_player, get_player_by_discord, list_players, is_blocked, block_user, remove_player_by_discord
+from config import load_pterodactyl_instances, load_admin_config
+import json
 
 intents = discord.Intents.default()
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 register_only = False
 
-ALLOWED_ROLE_NAME = "WhitelistAdmin"  # Change as needed
-ALLOWED_USER_IDS = []  # Add allowed user IDs if needed
+allowed_role_id, allowed_user_ids = load_admin_config()
 
 def is_whitelist_admin():
     async def predicate(ctx):
-        # Allow if user has the allowed role
-        if any(role.name == ALLOWED_ROLE_NAME for role in ctx.author.roles):
+        # Allow if user has the allowed role ID
+        if allowed_role_id and any(role.id == allowed_role_id for role in ctx.author.roles):
             return True
         # Allow if user ID is in allowed list
-        if ctx.author.id in ALLOWED_USER_IDS:
+        if ctx.author.id in allowed_user_ids:
             return True
         await ctx.respond("You do not have permission to use this command.", ephemeral=True)
         return False
@@ -55,9 +56,18 @@ async def register(ctx, mc_username):
         await ctx.respond(f"Username '{mc_username}' does not exist.", ephemeral=True)
         return
     uuid = data.get('id')
-    add_player(mc_username, discord_username, uuid)
+    # Check admin
+    is_admin = False
+    if hasattr(ctx.author, 'roles') and any(role.id == allowed_role_id for role in ctx.author.roles):
+        is_admin = True
+    if ctx.author.id in allowed_user_ids:
+        is_admin = True
+    add_player(mc_username, discord_username, uuid, op=1 if is_admin else 0)
     await update_all_whitelists()
-    await ctx.respond(f"Username received: {mc_username}", ephemeral=True)
+    if is_admin:
+        await update_all_ops()
+    op_msg = "\nYou will need to restart the server to apply your operator permissions."
+    await ctx.respond(f"You have been registered as: {mc_username}. {op_msg if is_admin else ""}", ephemeral=True)
 
 # Admin command to list all users
 @bot.slash_command()
@@ -74,7 +84,7 @@ async def list_users(ctx):
 @bot.slash_command()
 @option("mc_username", discord.SlashCommandOptionType.string)
 @option("uuid", discord.SlashCommandOptionType.string)
-@option("discord_username", discord.SlashCommandOptionType.string, required=False)
+@option("discord_username", discord.SlashCommandOptionType.user, required=False)
 @is_whitelist_admin()
 async def add_user(ctx, mc_username, uuid, discord_username=None):
     if not discord_username:
@@ -82,14 +92,22 @@ async def add_user(ctx, mc_username, uuid, discord_username=None):
     if get_player_by_discord(discord_username) and discord_username != "(none)":
         await ctx.respond("This Discord user already has a Minecraft username registered.", ephemeral=True)
         return
-    add_player(mc_username, discord_username, uuid)
+    # Check admin
+    is_admin = False
+    if hasattr(ctx.author, 'roles') and any(role.id == allowed_role_id for role in ctx.author.roles):
+        is_admin = True
+    if ctx.author.id in allowed_user_ids:
+        is_admin = True
+    add_player(mc_username, discord_username, uuid, op=1 if is_admin else 0)
     await update_all_whitelists()
+    if is_admin:
+        await update_all_ops()
     await ctx.respond(f"Added user: MC={mc_username}, Discord={discord_username}, UUID={uuid}", ephemeral=True)
 
 # Admin command to block users
 @bot.slash_command()
 @is_whitelist_admin()
-@option("discord_username", discord.SlashCommandOptionType.string, required=False)
+@option("discord_username", discord.SlashCommandOptionType.user, required=False)
 @option("mc_username", discord.SlashCommandOptionType.string, required=False)
 async def block(ctx, discord_username=None, mc_username=None):
     if not discord_username and not mc_username:
@@ -104,6 +122,16 @@ async def block(ctx, discord_username=None, mc_username=None):
 async def sync_whitelist(ctx):
     await update_all_whitelists()
     await ctx.respond("Whitelist sync triggered.", ephemeral=True)
+
+@bot.slash_command()
+async def deregister(ctx):
+    discord_username = str(ctx.author)
+    if not get_player_by_discord(discord_username):
+        await ctx.respond("You are not registered.", ephemeral=True)
+        return
+    remove_player_by_discord(discord_username)
+    await update_all_whitelists()
+    await ctx.respond("You have been deregistered and removed from the whitelist.", ephemeral=True)
 
     
 if __name__ == "__main__":
