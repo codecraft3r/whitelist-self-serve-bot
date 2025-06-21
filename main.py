@@ -5,14 +5,11 @@ import discord
 from discord import option
 from discord.ext import commands
 from dotenv import load_dotenv
-import asyncio
-import aiohttp
 from pterodactyl_api import update_all_whitelists, update_all_ops
 from mojang_api import get_mojang_profile
 
 from db import init_db, add_player, get_player_by_discord, list_players, is_blocked, block_user, remove_player_by_discord, unblock_user
-from config import load_pterodactyl_instances, load_admin_config
-import json
+from config import load_admin_config
 
 intents = discord.Intents.default()
 
@@ -38,6 +35,7 @@ async def on_ready():
     init_db()
     if register_only:
         await bot.register_commands()
+        print("Commands registered, you can ignore the below error. Exiting...")
         exit(0)
     print(f"Logged in as {bot.user}")
 
